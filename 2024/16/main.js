@@ -1,44 +1,6 @@
-const cmp = (a, b) => a.cost - b.cost
-const Item = (row, col, dir, cost) => ({ row, col, dir, cost })
+const MinHeap = require('../../utils/min-heap')
 
-const heapPush = (h, item) => {
-	let i = h.length
-	h.push(item)
-	while (i > 0) {
-		const p = (i - 1) >> 1
-		if (cmp(h[p], item) <= 0) break
-		h[i] = h[p]
-		i = p
-	}
-	h[i] = item
-}
-
-const heapPop = (h) => {
-	const res = h[0]
-	if (h.length === 1) {
-		h.length = 0
-		return res
-	}
-	const item = h[h.length - 1]
-	h.length -= 1
-	let i = 0
-	for (const n = h.length; ; ) {
-		let c = (i << 1) | 1
-		if (c >= n) break
-		if (c + 1 !== n && cmp(h[c], h[c + 1]) > 0) c += 1
-		if (cmp(h[c], item) >= 0) break
-		h[i] = h[c]
-		i = c
-	}
-	h[i] = item
-	return res
-}
-
-const inputName = process.argv[2] ?? './input.txt'
-
-const input = require('fs')
-	.readFileSync(inputName)
-	.toString('utf8')
+const input = require('../../utils/raw-input')
 	.split('\n')
 	.map((l) => l.trim())
 	.filter((l) => l)
@@ -53,21 +15,21 @@ const rows = input.length,
 	START = 'S',
 	END = 'E',
 	WALL = '#',
-	costMap = {},
-	dirs = [UP, RIGHT, DOWN, LEFT]
+	dirs = [UP, RIGHT, DOWN, LEFT],
+	costMap = {}
 
 const calcTurningCost = (prevDir, nextDir) => {
 	const diff = Math.abs(nextDir - prevDir)
 	return (diff === 3 ? 1 : diff) * 1000
 }
 
+const buildItem = (row, col, dir, cost) => ({ row, col, dir, cost })
 const getCellKey = (row, col) => row * cols + col
 const getStateKey = (row, col, dir) => getCellKey(row, col) * 4 + dir
 const costFor = (stateKey) => costMap[stateKey] ?? Infinity
 
 const findStartEnd = () => {
-	let start = null,
-		end = null
+	let start, end
 	for (let row = 0; row < rows; row++) {
 		for (let col = 0; col < cols; col++) {
 			const cell = input[row][col]
@@ -90,7 +52,7 @@ const addNeighbor = (h, row, col, dir, cost) => {
 	const currentCost = costFor(key)
 	if (cost >= currentCost) return
 	costMap[key] = cost
-	heapPush(h, Item(row, col, dir, cost))
+	h.push(buildItem(row, col, dir, cost))
 }
 
 const addBackwardNeighbors = (h, { row, col, dir, cost }) => {
@@ -156,13 +118,14 @@ const main = () => {
 	const t0 = performance.now()
 	const { start, end } = findStartEnd()
 	const { row, col } = end
-	const h = dirs.map((dir) => Item(row, col, dir, 0))
-	for (const { row, col, dir } of h) {
+	const h = new MinHeap((a, b) => a.cost - b.cost)
+	h.array = dirs.map((dir) => buildItem(row, col, dir, 0))
+	for (const { row, col, dir } of h.array) {
 		costMap[getStateKey(row, col, dir)] = 0
 	}
 	let min_cost, optimal_count
 	while (h.length) {
-		const item = heapPop(h)
+		const item = h.pop()
 		if (
 			item.row === start.row &&
 			item.col === start.col &&
@@ -183,25 +146,3 @@ const main = () => {
 }
 
 main()
-
-// const testHeap = () => {
-// 	const n = 1e5
-// 	const values = []
-// 	const h = []
-// 	for (let i = 0; i < n; ++i) {
-// 		const cost = (Math.random() * n * 2) | 0
-// 		values.push(cost)
-// 		heapPush(h, { cost })
-// 	}
-// 	const sorted = values
-// 		.slice()
-// 		.sort((a, b) => a - b)
-// 		.join(',')
-// 	const popped = []
-// 	while (h.length) {
-// 		popped.push(heapPop(h))
-// 	}
-// 	const match = popped.map((item) => item.cost).join(',') === sorted
-// 	console.log(`Heap test: ${match ? 'PASS' : 'FAIL'}`)
-// }
-// testHeap()
