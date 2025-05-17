@@ -1,22 +1,30 @@
 const rawInput = require('../../utils/raw-input')
-
-let count = 0
-rawInput
+const input = rawInput
 	.trim()
 	.split('\n')
-	.forEach((line) => {
-		const arr = line.split(/\s+/).map(Number)
-		const diff = arr[1] - arr[0]
-		const abs = Math.abs(diff)
-		if (abs < 1 || abs > 3) return
-		const sign = Math.sign(diff)
-		for (let i = 2; i < arr.length; ++i) {
-			const diff = arr[i] - arr[i - 1]
-			const abs = Math.abs(diff)
-			if (abs < 1 || abs > 3) return
-			if (Math.sign(diff) !== sign) return
-		}
-		count += 1
-	})
+	.map((line) => line.split(' ').map(Number))
 
-console.log(count)
+const isSafe = (arr, index, prev, sign, skip) => {
+	if (arr.length === index) return true
+	const curr = arr[index]
+	if (prev === null) {
+		return isSafe(arr, index + 1, curr, sign, skip) || (skip && isSafe(arr, index + 1, prev, sign, false))
+	}
+	const diff = curr - prev
+	const abs = Math.abs(diff)
+	const newSign = Math.sign(diff)
+	return (
+		(abs > 0 && abs < 4 && (sign === 0 || sign === newSign) && isSafe(arr, index + 1, curr, newSign, skip)) ||
+		(skip && isSafe(arr, index + 1, prev, sign, false))
+	)
+}
+
+let count1 = 0
+let count2 = 0
+for (const row of input) {
+	if (isSafe(row, 0, null, 0, false)) count1 += 1
+	if (isSafe(row, 0, null, 0, true)) count2 += 1
+}
+
+console.log('Part 1:', count1)
+console.log('Part 2:', count2)
