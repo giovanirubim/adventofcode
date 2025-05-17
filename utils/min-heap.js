@@ -1,6 +1,6 @@
 module.exports = class MinHeap {
-	constructor(cmp) {
-		this.array = []
+	constructor(cmp, array = []) {
+		this.array = array
 		this.cmp = cmp
 	}
 	push(item) {

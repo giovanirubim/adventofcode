@@ -1,9 +1,8 @@
 const MinHeap = require('../../utils/min-heap')
 
 const input = require('../../utils/raw-input')
+	.trim()
 	.split('\n')
-	.map((l) => l.trim())
-	.filter((l) => l)
 	.map((l) => l.split(''))
 
 const rows = input.length,
