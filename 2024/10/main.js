@@ -29,22 +29,26 @@ const score1 = (row, col) => {
 }
 const score2 = (row, col) => {
 	if (map[row][col] !== 0) return 0
-	const countMap = { [toKey(row, col)]: 1 }
-	const valueMap = { [toKey(row, col)]: 0 }
+	const key = toKey(row, col)
+	const countMap = { [key]: 1 }
+	const valueMap = { [key]: 0 }
+	const visited = new Set([key])
 	let q = [[row, col]]
 	let val = 0
 	while (q.length !== 0) {
 		const next = []
 		val += 1
 		for (const [row, col] of q) {
-			console.log('exploring', row, col)
 			const count = countMap[toKey(row, col)]
 			getAdjacent(row, col).forEach(([row, col]) => {
 				if (map[row][col] !== val) return
 				const key = toKey(row, col)
 				countMap[key] = (countMap[key] ?? 0) + count
 				valueMap[key] = val
-				if (val !== 9) next.push([row, col])
+				if (val !== 9 && !visited.has(key)) {
+					next.push([row, col])
+					visited.add(key)
+				}
 			})
 		}
 		q = next
