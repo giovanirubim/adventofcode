@@ -22,8 +22,7 @@ const solve = (text) => {
 	};
 	for (let i = 0; i < n; i++) {
 		for (let j = 0; j < m; j++) {
-			if (grid[i][j] !== '@') continue;
-			add(i, j);
+			if (grid[i][j] === '@') add(i, j);
 		}
 	}
 	let res = 0;
