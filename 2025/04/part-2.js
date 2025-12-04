@@ -6,18 +6,17 @@ const solve = (text) => {
 	const n = grid.length;
 	const m = grid[0].length;
 	const checkList = [];
-	const isInCheckList = {};
+	const isInCheckList = Array(n * m);
 	const add = (i, j) => {
 		const key = i * m + j;
-		if (isInCheckList[key]) return;
+		if (isInCheckList[key] === true) return;
 		isInCheckList[key] = true;
 		checkList.push([i, j]);
 	};
 	const pop = () => {
 		const item = checkList.pop();
 		const [i, j] = item;
-		const key = i * m + j;
-		isInCheckList[key] = false;
+		isInCheckList[i * m + j] = false;
 		return item;
 	};
 	for (let i = 0; i < n; i++) {
