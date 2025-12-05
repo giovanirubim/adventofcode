@@ -6,11 +6,11 @@ const solve = (text) => {
 		.filter((l) => l.includes('-'))
 		.map((l) => l.split('-').map(Number))
 		.sort((a, b) => a[0] - b[0]);
-	let [start, end, res] = [0, -1, 0];
+	let [end, res] = [0, 0];
 	for (const [a, b] of ranges) {
 		if (a > end) {
 			res += b - a + 1;
-			[start, end] = [a, b];
+			end = b;
 		} else if (b > end) {
 			res += b - end;
 			end = b;
