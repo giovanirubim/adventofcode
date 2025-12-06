@@ -1,7 +1,5 @@
 import fs from 'fs';
 
-console.clear();
-
 const solve = (text) => {
 	const lines = text.split('\n').filter((l) => l.trim());
 	const n = lines.length;

@@ -1,7 +1,5 @@
 import fs from 'fs';
 
-console.clear();
-
 const solve = (text) => {
 	const lines = text.trim().split('\n');
 	const table = lines.map((l) => l.trim().split(/\s+/));
