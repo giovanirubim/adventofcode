@@ -1,13 +1,33 @@
 import fs from 'fs';
 
+console.clear();
+
 const solve = (text) => {
-	return 1;
+	const lines = text.trim().split('\n');
+	const table = lines.map((l) => l.trim().split(/\s+/));
+	const n = table.length;
+	const m = table[0].length;
+	let res = 0;
+	for (let j = 0; j < m; j++) {
+		const op = table[n - 1][j];
+		let curr = op === '+' ? 0 : 1;
+		for (let i = 0; i < n - 1; i++) {
+			const val = Number(table[i][j]);
+			if (op === '+') curr += val;
+			else curr *= val;
+		}
+		res += curr;
+	}
+	return res;
 };
 
 const sampleText = `
-sample text here
+123 328  51 64 
+ 45 64  387 23 
+  6 98  215 314
+*   +   *   +  
 `;
-const expected = 0;
+const expected = 4277556;
 const actual = solve(sampleText);
 
 if (actual !== expected) {
