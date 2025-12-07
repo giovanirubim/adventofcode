@@ -14,14 +14,15 @@ const solve = (text) => {
 			}
 		}
 	}
+	const cache = Array(m * n);
 	const count = (i, j) => {
-		if (grid[i][j] === '|') return 0;
+		if (i === n - 1) return 1;
+		const key = i * m + j;
+		if (cache[key] !== undefined) return cache[key];
 		if (grid[i][j] === '^') {
-			return 1 + count(i, j - 1) + count(i, j + 1);
+			return (cache[key] = count(i, j - 1) + count(i, j + 1));
 		}
-		grid[i][j] = '|';
-		if (i === n - 1) return 0;
-		return count(i + 1, j);
+		return (cache[key] = count(i + 1, j));
 	};
 	return count(si, sj);
 };
@@ -44,7 +45,7 @@ const sampleText = `
 .^.^.^.^.^...^.
 ...............
 `;
-const expected = 21;
+const expected = 40;
 const actual = solve(sampleText);
 
 if (actual !== expected) {
