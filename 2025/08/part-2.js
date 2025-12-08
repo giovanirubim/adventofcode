@@ -1,10 +1,11 @@
 import fs from 'fs';
 
-const solve = (text, count) => {
+const solve = (text) => {
 	const arr = text
 		.trim()
 		.split('\n')
 		.map((coord) => coord.split(',').map(Number));
+	console.log('N points:', arr.length);
 	const pairs = [];
 	const n = arr.length;
 	const calcDist = ([ax, ay, az], [bx, by, bz]) => Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2);
@@ -18,17 +19,13 @@ const solve = (text, count) => {
 	for (let i = 0; i < n; i++) parent[i] = i;
 	const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
 	const join = (i, j) => (parent[find(i)] = find(j));
+	let count = arr.length - 1;
 	for (let [_, i, j] of pairs) {
-		if (count-- === 0) break;
 		if (find(i) === find(j)) continue;
 		join(i, j);
+		if (--count > 0) continue;
+		return arr[i][0] * arr[j][0];
 	}
-	const sizes = Array(n).fill(0);
-	for (let i = 0; i < n; i++) {
-		sizes[find(i)] += 1;
-	}
-	sizes.sort((a, b) => b - a);
-	return sizes.slice(0, 3).reduce((a, b) => a * b);
 };
 
 const sampleText = `
@@ -53,8 +50,8 @@ const sampleText = `
 984,92,344
 425,690,689
 `;
-const expected = 40;
-const actual = solve(sampleText, 10);
+const expected = 25272;
+const actual = solve(sampleText);
 
 if (actual !== expected) {
 	console.error('Failed with sample input');
@@ -67,7 +64,7 @@ console.log('Matched sample result');
 
 const inputText = fs.readFileSync('./input.txt', 'ascii');
 const start = performance.now();
-const result = solve(inputText, 1000);
+const result = solve(inputText);
 const end = performance.now();
 
 console.log('Result:', result);
