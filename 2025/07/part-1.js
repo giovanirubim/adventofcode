@@ -4,26 +4,14 @@ const solve = (text) => {
 	const lines = text.trim().split('\n');
 	const grid = lines.map((l) => l.split(''));
 	const n = grid.length;
-	const m = grid[0].length;
-	let si, sj;
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < m; j++) {
-			if (grid[i][j] === 'S') {
-				si = i;
-				sj = j;
-			}
-		}
-	}
 	const count = (i, j) => {
 		if (grid[i][j] === '|') return 0;
-		if (grid[i][j] === '^') {
-			return 1 + count(i, j - 1) + count(i, j + 1);
-		}
+		if (grid[i][j] === '^') return 1 + count(i, j - 1) + count(i, j + 1);
 		grid[i][j] = '|';
 		if (i === n - 1) return 0;
 		return count(i + 1, j);
 	};
-	return count(si, sj);
+	return count(0, lines[0].indexOf('S'));
 };
 
 const sampleText = `

@@ -1,30 +1,18 @@
 import fs from 'fs';
 
 const solve = (text) => {
-	const lines = text.trim().split('\n');
-	const grid = lines.map((l) => l.split(''));
+	const grid = text.trim().split('\n');
 	const n = grid.length;
 	const m = grid[0].length;
-	let si, sj;
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < m; j++) {
-			if (grid[i][j] === 'S') {
-				si = i;
-				sj = j;
-			}
-		}
-	}
 	const cache = Array(m * n);
 	const count = (i, j) => {
 		if (i === n - 1) return 1;
 		const key = i * m + j;
 		if (cache[key] !== undefined) return cache[key];
-		if (grid[i][j] === '^') {
-			return (cache[key] = count(i, j - 1) + count(i, j + 1));
-		}
-		return (cache[key] = count(i + 1, j));
+		if (grid[i][j] !== '^') return (cache[key] = count(i + 1, j));
+		return (cache[key] = count(i, j - 1) + count(i, j + 1));
 	};
-	return count(si, sj);
+	return count(0, grid[0].indexOf('S'));
 };
 
 const sampleText = `
