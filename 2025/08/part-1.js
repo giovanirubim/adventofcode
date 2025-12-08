@@ -1,32 +1,26 @@
 import fs from 'fs';
 
 const solve = (text, count) => {
-	const arr = text
-		.trim()
-		.split('\n')
-		.map((coord) => coord.split(',').map(Number));
+	const lines = text.trim().split('\n');
+	const arr = lines.map(l => l.split(',').map(Number));
 	const pairs = [];
 	const n = arr.length;
-	const calcDist = ([ax, ay, az], [bx, by, bz]) => Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2);
+	const calcDist = ([ax, ay, az], [bx, by, bz]) => (ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2;
 	for (let i = 1; i < n; i++) {
 		for (let j = 0; j < i; j++) {
-			pairs.push([calcDist(arr[i], arr[j]), i, j]);
+			pairs.push([i, j, calcDist(arr[i], arr[j])]);
 		}
 	}
-	pairs.sort((a, b) => a[0] - b[0]);
+	pairs.sort((a, b) => a[2] - b[2]);
 	const parent = Array(n);
 	for (let i = 0; i < n; i++) parent[i] = i;
 	const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
 	const join = (i, j) => (parent[find(i)] = find(j));
-	for (let [_, i, j] of pairs) {
-		if (count-- === 0) break;
-		if (find(i) === find(j)) continue;
-		join(i, j);
+	for (const [i, j] of pairs.slice(0, count)) {
+		if (find(i) !== find(j)) join(i, j);
 	}
 	const sizes = Array(n).fill(0);
-	for (let i = 0; i < n; i++) {
-		sizes[find(i)] += 1;
-	}
+	for (let i = 0; i < n; i++) sizes[find(i)] += 1;
 	sizes.sort((a, b) => b - a);
 	return sizes.slice(0, 3).reduce((a, b) => a * b);
 };
