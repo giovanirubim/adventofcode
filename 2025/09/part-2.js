@@ -1,19 +1,26 @@
 import fs from 'fs';
 
-const minMax = (a, b) => [Math.min(a, b), Math.max(a, b)];
+const moves = [[0, 1], [0, -1], [-1, 0], [1, 0]];
+
+// Create an array of values to compact a coordinate axis
 const compact = (coords, axis) => {
 	const vals = coords.map((coord) => coord[axis]);
-	const uq = [...new Set(vals)];
-	return [0, ...uq.sort((a, b) => a - b), 1e10]; // Add a gap to flood fill around the drawing
+	const uniqueSorted = [...new Set(vals)].sort((a, b) => a - b);
+	return [0, ...uniqueSorted, 1e10]; // Add a gap to flood fill around the drawing
 };
-const moves = [[0, 1], [0, -1], [-1, 0], [1, 0]];
+
+const minMax = (a, b) => [Math.min(a, b), Math.max(a, b)];
+const buildMat = (n, m, v) => Array.from({ length: n }, () => Array(m).fill(v));
+
 const solve = (text) => {
 	const lines = text.trim().split('\n');
 	const coords = lines.map((l) => l.split(',').map(Number));
 	const [xVals, yVals] = [compact(coords, 0), compact(coords, 1)];
 	const arr = coords.map(([x, y]) => [xVals.indexOf(x), yVals.indexOf(y)]); // Array of compacted coordinates
 	const n = arr.length;
-	const grid = Array.from({ length: xVals.length }, () => Array(yVals.length).fill('.'));
+	const grid = buildMat(xVals.length, yVals.length, '.');
+
+	// Connect points
 	const connect = ([ax, ay], [bx, by]) => {
 		for (;;) {
 			grid[ax][ay] = '#';
@@ -21,6 +28,44 @@ const solve = (text) => {
 			ax += Math.sign(bx - ax);
 			ay += Math.sign(by - ay);
 		}
+	};
+	for (let i = 0; i < n; i++) {
+		const j = (i + 1) % n;
+		connect(arr[i], arr[j]);
+	}
+
+	// Flood fill, DFS
+	const stack = [[0, 0]];
+	while (stack.length) {
+		const [x, y] = stack.pop();
+		for (const [mx, my] of moves) {
+			const [nx, ny] = [x + mx, y + my];
+			if (grid[nx]?.[ny] !== '.') continue;
+			grid[nx][ny] = '_';
+			stack.push([nx, ny]);
+		}
+	}
+
+	// Build prefix matrix
+	const prefix = buildMat(xVals.length, yVals.length, 0);
+	for (let x = 0; x < xVals.length; x++) {
+		let colCount = 0;
+		for (let y = 0; y < yVals.length; y++) {
+			const bit = grid[x][y] === '_';
+			prefix[x][y] = bit + (prefix[x - 1]?.[y] ?? 0) + colCount;
+			colCount += bit;
+		}
+	}
+
+	// Helpers for the rectangle search
+	const isValid = ([ax, ay], [bx, by]) => {
+		const [x0, x1] = minMax(ax, bx);
+		const [y0, y1] = minMax(ay, by);
+		const a = prefix[x0 - 1]?.[y0 - 1] ?? 0;
+		const b = prefix[x0 - 1]?.[y1] ?? 0;
+		const c = prefix[x1][y0 - 1] ?? 0;
+		const d = prefix[x1][y1];
+		return d - b - c + a === 0;
 	};
 	const recover = (i) => {
 		const [ix, iy] = arr[i];
@@ -31,30 +76,8 @@ const solve = (text) => {
 		const [bx, by] = recover(j);
 		return (Math.abs(bx - ax) + 1) * (Math.abs(by - ay) + 1);
 	};
-	const isValid = ([ax, ay], [bx, by]) => {
-		const [x0, x1] = minMax(ax, bx);
-		const [y0, y1] = minMax(ay, by);
-		for (let x = x0; x <= x1; x++) {
-			for (let y = y0; y <= y1; y++) {
-				if (grid[x][y] === '_') return false;
-			}
-		}
-		return true;
-	};
-	for (let i = 0; i < n; i++) {
-		const j = (i + 1) % n;
-		connect(arr[i], arr[j]);
-	}
-	const stack = [[0, 0]];
-	while (stack.length) { // Flood fill, DFS
-		const [x, y] = stack.pop();
-		for (const [mx, my] of moves) {
-			const [nx, ny] = [x + mx, y + my];
-			if (grid[nx]?.[ny] !== '.') continue;
-			grid[nx][ny] = '_';
-			stack.push([nx, ny]);
-		}
-	}
+
+	// Rectangle search
 	let res = 0;
 	for (let i = 1; i < n; i++) {
 		for (let j = 1; j < n; j++) {
