@@ -2,19 +2,22 @@ import fs from 'fs';
 import { solve } from './solution.js';
 
 const sample = `
-aaa: you hhh
-you: bbb ccc
-bbb: ddd eee
-ccc: ddd eee fff
-ddd: ggg
-eee: out
-fff: out
+svr: aaa bbb
+aaa: fft
+fft: ccc
+bbb: tty
+tty: ccc
+ccc: ddd eee
+ddd: hub
+hub: fff
+eee: dac
+dac: fff
+fff: ggg hhh
 ggg: out
-hhh: ccc fff iii
-iii: out
+hhh: out
 `;
-const expected = 5;
-const actual = solve(sample, 'you', 'out', []);
+const expected = 2;
+const actual = solve(sample, 'svr', 'out', ['dac', 'fft']);
 
 if (actual !== expected) {
 	console.error('Failed with sample input');
@@ -27,7 +30,7 @@ console.log('Matched sample result');
 
 const inputText = fs.readFileSync('input.txt', 'ascii');
 const start = performance.now();
-const result = solve(inputText, 'you', 'out', []);
+const result = solve(inputText, 'svr', 'out', ['dac', 'fft']);
 const end = performance.now();
 
 console.log('Result:', result);
