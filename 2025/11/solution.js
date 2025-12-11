@@ -34,8 +34,8 @@ export const solve = (inputText, src, dst, targets) => {
 		}
 
 		let res = 0;
-		for (const prev of edgeMap[node] ?? []) {
-			res += countsPathFrom(prev, nextMask);
+		for (const next of edgeMap[node] ?? []) {
+			res += countsPathFrom(next, nextMask);
 		}
 		return (memo[key] = res);
 	};
