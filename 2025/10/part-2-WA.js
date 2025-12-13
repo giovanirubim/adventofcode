@@ -172,7 +172,7 @@ if (actual !== expected) {
 
 console.log('Matched sample result');
 
-const inputText = fs.readFileSync('./nardi.txt', 'ascii');
+const inputText = fs.readFileSync('./input.txt', 'ascii');
 const start = performance.now();
 const result = solve(inputText);
 const end = performance.now();

@@ -93,14 +93,14 @@ const solveMask = (mask, system, tree, memo) => {
 	return dfs(mask);
 };
 
-const runPositiveChecks = (masks, system, tree, memo) => {
+const runNegChecks = (masks, system, tree, memo) => {
 	for (const mask of masks) {
 		if (solveMask(mask, system, tree, memo) < 0) return false;
 	}
 	return true;
 };
 
-const inputText = fs.readFileSync('./10-input.txt', 'ascii');
+const inputText = fs.readFileSync('./input.txt', 'ascii');
 const lines = inputText.trim().split('\n');
 
 const solveCompleteSystem = (system, nBits, tree) => {
@@ -154,7 +154,7 @@ lines.forEach((line, i) => {
 	if (missing.length === 0) {
 		const counts = solveCompleteSystem(system, nBits, tree);
 		const res = counts.reduce((a, b) => a + b, 0);
-		console.log(`Line ${i + 1}:`, res, 'solved directly');
+		console.log(`Line ${i}:`, res, 'solved directly');
 	} else if (missing.length === 1) {
 		const min = Math.max(...vals);
 		const max = vals.reduce((a, b) => a + b, 0);
@@ -162,7 +162,7 @@ lines.forEach((line, i) => {
 		for (let total = min; total <= max; total++) {
 			system[all] = total;
 			const map = solveCompleteSystem(system, nBits, tree);
-			if (!runPositiveChecks(masksBySrc[all], system, tree, {})) {
+			if (!runNegChecks(masksBySrc[all], system, tree, {})) {
 				continue;
 			}
 			if (validateSolution(system, map)) {
@@ -170,10 +170,7 @@ lines.forEach((line, i) => {
 				break;
 			}
 		}
-		console.log(`Line ${i + 1}:`, res, 'solved with simple search');
+		console.log(`Line ${i}:`, res, 'solved with simple search');
 	} else {
-		const tMin = Math.max(...vals);
-		const tMax = vals.reduce((a, b) => a + b, 0);
-		console.log(`Line ${i + 1}: between`, tMin, 'and', tMax);
 	}
 });
