@@ -5,6 +5,10 @@ const lowestBit = (x) => (x & (x - 1)) ^ x;
 const maxMin = (a, b) => [Math.max(a, b), Math.min(a, b)];
 const numArr = (str) => str.split(',').map(Number);
 
+const SRC_INITIAL = 'src-initial';
+const INFERRED_INITIALLY = 'inferred-initially';
+const INSERTED = 'inserted';
+
 const pruneTree = (tree, nBits) => {
 	const res = {};
 	const copy = (mask) => {
@@ -19,38 +23,39 @@ const pruneTree = (tree, nBits) => {
 	return res;
 };
 
-const pruneDepMap = (depMap, tree) => {
+const pruneSrcMap = (srcMap, tree) => {
 	const map = {};
 	for (const sMask in tree) {
-		map[sMask] = depMap[sMask];
+		map[sMask] = srcMap[sMask];
 	}
 	return map;
 };
 
-const remapDepMap = (depMap, tree) => {
+const remapSrcMap = (srcMap, tree) => {
 	const map = {};
 	for (const sMask in tree) {
-		const dep = depMap[sMask];
-		if (dep === null) continue;
-		map[dep] = [];
+		const src = srcMap[sMask];
+		if (src === null) continue;
+		map[src] = [];
 	}
 	for (const sMask in tree) {
-		const dep = depMap[sMask];
-		if (dep === null) continue;
+		const src = srcMap[sMask];
+		if (src === null) continue;
 		const mask = Number(sMask);
-		map[dep].push(mask);
+		map[src].push(mask);
 	}
 	return map;
 };
 
-const cascade = (system, rootMask, affectedMasks, tree, depMap) => {
+const cascade = (system, rootMask, affectedMasks, tree, srcMap) => {
 	const memo = {};
 	let used = 0;
 	const solve = (mask) => {
-		if (depMap[mask] !== rootMask) return system[mask];
+		if (srcMap[mask] !== rootMask) return system[mask];
 		if (memo[mask] !== undefined) return memo[mask];
 		const [major, minor] = tree[mask];
 		const res = solve(major) - solve(minor);
+		if (res < 0) return -1;
 		if (hasOneBit(mask)) used += res;
 		return (system[mask] = memo[mask] = res);
 	};
@@ -64,13 +69,14 @@ const mapSystemInferences = (masks, nBits) => {
 	const all = (1 << nBits) - 1;
 	let unknown = all;
 	let tree = {};
-	let depMap = {};
+	let srcMap = {};
 	for (const mask of masks) {
-		tree[mask] = depMap[mask] = null;
+		tree[mask] = null;
+		srcMap[mask] = SRC_INITIAL;
 		if (hasOneBit(mask)) unknown ^= mask;
 	}
 	const missing = [];
-	let dep = null;
+	let src = INFERRED_INITIALLY;
 	for (let i = 1; i < masks.length; i++) {
 		const iMask = masks[i];
 		for (let j = 0; j < i; j++) {
@@ -81,7 +87,7 @@ const mapSystemInferences = (masks, nBits) => {
 			if (tree[mask] !== undefined) continue;
 			masks.push(mask);
 			tree[mask] = [major, minor];
-			depMap[mask] = dep;
+			srcMap[mask] = src;
 			if (hasOneBit(mask)) unknown ^= mask;
 		}
 		if (unknown === 0) break;
@@ -92,14 +98,15 @@ const mapSystemInferences = (masks, nBits) => {
 				unknown ^= newMask;
 			}
 			masks.push(newMask);
-			tree[newMask] = depMap[newMask] = null;
+			tree[newMask] = null;
+			srcMap[newMask] = INSERTED;
 			missing.push(newMask);
-			dep = newMask;
+			src = newMask;
 		}
 	}
 	tree = pruneTree(tree, nBits);
-	depMap = pruneDepMap(depMap, tree);
-	return { tree, missing, depMap };
+	srcMap = pruneSrcMap(srcMap, tree);
+	return { tree, missing, srcMap };
 };
 
 const solveMask = (mask, system, tree, memo) => {
@@ -145,18 +152,6 @@ const validSystem = (system) => {
 	return true;
 };
 
-const preCalc = (system, tree, depMap, ignore) => {
-	let sum = 0;
-	for (const sMask in tree) {
-		if (depMap[sMask] !== null) continue;
-		if (ignore[sMask] !== undefined) continue;
-		solveMask(Number(sMask), system, tree, system);
-		const mask = Number(sMask);
-		if (hasOneBit(mask)) sum += system[sMask];
-	}
-	return sum;
-};
-
 const solveLine = (line) => {
 	const clear = line.replace(/[^\d,{\s]/g, '').trim();
 	const [a, b] = clear.split(' {');
@@ -174,24 +169,24 @@ const solveLine = (line) => {
 		system[mask] = vals[vi];
 		masks[vi] = mask;
 	}
-	const { tree, missing, depMap } = mapSystemInferences(masks.slice(), nBits);
+	const { tree, missing, srcMap } = mapSystemInferences(masks.slice(), nBits);
 	const ansMin = Math.max(...vals);
 	const ansMax = vals.reduce((a, b) => a + b);
 	const all = (1 << nBits) - 1;
 	if (missing.length === 0) {
 		return computeSolution(system, nBits, tree, {});
 	}
-	const masksByDep = remapDepMap(depMap, tree);
+	const masksBySrc = remapSrcMap(srcMap, tree);
 	const ignore = {};
 	for (const mask of missing) {
 		ignore[mask] = true;
 	}
-	let used = preCalc(system, tree, depMap, ignore);
+	const initialUse = cascade(system, INFERRED_INITIALLY, masksBySrc[INFERRED_INITIALLY] ?? [], tree, srcMap);
 	if (missing.length === 1) {
-		const fx = masksByDep[all];
+		const fx = masksBySrc[all];
 		for (let ans = ansMin; ans <= ansMax; ans++) {
 			system[all] = ans;
-			cascade(system, all, fx, tree, depMap);
+			cascade(system, all, fx, tree, srcMap);
 			if (validSystem(system) && !hasNegative(system, fx)) {
 				return ans;
 			}
@@ -212,22 +207,23 @@ const solveLine = (line) => {
 	const bruteForce = (index, unused) => {
 		if (index === n) return validSystem(system);
 		const mask = maskArr[index];
-		const fx = masksByDep[mask] ?? [];
+		const fx = masksBySrc[mask] ?? [];
 		const max = Math.min(unused, maxArr[index]);
-		for (let i = 0; i < max; i++) {
+		for (let i = 0; i <= max; i++) {
 			system[mask] = i;
-			const used = i + cascade(system, mask, fx, tree, depMap);
+			const used = cascade(system, mask, fx, tree, srcMap);
 			if (hasNegative(system, fx)) continue;
-			if (bruteForce(index + 1, unused - used)) return true;
+			if (bruteForce(index + 1, unused - i - used)) return true;
 		}
 		return false;
 	};
-	const fx = masksByDep[all] ?? [];
+	const fx = masksBySrc[all] ?? [];
 	for (let ans = ansMin; ans <= ansMax; ans++) {
 		system[all] = ans;
-		const newUsed = used + cascade(system, all, fx, tree, depMap);
+		const use = cascade(system, all, fx, tree, srcMap);
+		if (use < 0) continue;
 		if (hasNegative(system, fx)) continue;
-		if (bruteForce(0, ans - newUsed)) {
+		if (bruteForce(0, ans - use - initialUse)) {
 			return ans;
 		}
 	}
@@ -238,14 +234,12 @@ const solve = (text) => {
 	const lines = text.trim().split('\n');
 	let total = 0;
 	for (let i = 0; i < lines.length; i++) {
-		const t0 = performance.now();
 		const ans = solveLine(lines[i]);
-		const t1 = performance.now();
 		total += ans;
-		console.log(`Line ${i}:`, ans);
 	}
-	console.log(total);
+	console.log({ total });
 };
 
 const inputText = fs.readFileSync('./input.txt', 'ascii');
 solve(inputText);
+console.log('Processing complete');
