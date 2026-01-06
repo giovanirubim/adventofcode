@@ -2,96 +2,79 @@ import fs from 'fs';
 
 const parsePad = (str) => {
 	const lines = str.trim().split('\n');
-	const grid = lines.map((line) => line.replace(/\s/g, ''));
-	const keyToPos = {};
-	const n = grid.length;
-	const m = grid[0].length;
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < m; j++) {
-			keyToPos[grid[i][j]] = [i, j];
+	const grid = lines.map((line) => line.trim().split(/\s+/));
+	const cols = grid[0].length;
+	const keys = grid.flat();
+	const nKeys = keys.length;
+	const dirSeqMap = {};
+	for (let i = 0; i < nKeys; i++) {
+		const a = keys[i];
+		const [ai, aj] = [(i / cols) | 0, i % cols];
+		if (a === '#') continue;
+		for (let j = 0; j < nKeys; j++) {
+			const b = keys[j];
+			if (b === '#') continue;
+			const [bi, bj] = [(j / cols) | 0, j % cols];
+			const vPath = bi > ai ? 'v'.repeat(bi - ai) : '^'.repeat(ai - bi);
+			const hPath = bj > aj ? '>'.repeat(bj - aj) : '<'.repeat(aj - bj);
+			const res = new Set();
+			if (grid[bi][aj] !== '#') res.add(vPath + hPath);
+			if (grid[ai][bj] !== '#') res.add(hPath + vPath);
+			dirSeqMap[a + b] = [...res];
 		}
 	}
-	return { grid, keyToPos };
+	return { dirSeqMap };
 };
 
-const numPad = parsePad(`
-    7 8 9
-    4 5 6
-    1 2 3
-    # 0 A
-`);
+const pads = [
+	parsePad(`
+        7 8 9
+        4 5 6
+        1 2 3
+        # 0 A
+    `),
+	parsePad(`
+        # ^ A
+        < v >
+    `),
+];
+const NUM_TYPE = 0;
+const DIR_TYPE = 1;
 
-const dirPad = parsePad(`
-    # ^ A
-    < v >
-`);
+const mem = {};
+const moveAndPressCost = (type, src, dst, extraDirPads) => {
+	if (extraDirPads === 0) return 1;
 
-const pads = [numPad, dirPad];
-const NUM_TYPE = pads.indexOf(numPad);
-const DIR_TYPE = pads.indexOf(dirPad);
+	const memKey = type + src + dst + extraDirPads;
+	if (mem[memKey] !== undefined) return mem[memKey];
 
-// Return 1 or 2 sequences of direction keys that move the pointer from a src key to a dst key
-const seqMemo = {};
-const getSequences = (src, dst, padType) => {
-	if (src === dst) return [''];
-
-	const cacheKey = src + dst + padType;
-	if (seqMemo[cacheKey] !== undefined) return seqMemo[cacheKey];
-
-	const { keyToPos, grid } = pads[padType];
-	const [srcI, srcJ] = keyToPos[src];
-	const [dstI, dstJ] = keyToPos[dst];
-	const dirI = Math.sign(dstI - srcI);
-	const dirJ = Math.sign(dstJ - srcJ);
-	const vSteps = (dirI > 0 ? 'v' : '^').repeat(Math.abs(dstI - srcI));
-	const hSteps = (dirJ > 0 ? '>' : '<').repeat(Math.abs(dstJ - srcJ));
-
-	if (vSteps === '' || hSteps === '') {
-		return (seqMemo[cacheKey] = [vSteps || hSteps]);
-	}
-
-	const res = [];
-	if (grid[dstI][srcJ] !== '#') res.push(vSteps + hSteps);
-	if (grid[srcI][dstJ] !== '#') res.push(hSteps + vSteps);
-
-	return (seqMemo[cacheKey] = res);
-};
-
-// Calculates the cost of, starting at A, press the keys on the sequence, then move back to A
-const costMemo = {};
-const calcSeqCost = (seq, padType, nDirPads) => {
-	if (nDirPads === 0) return seq.length;
-	if (seq === '') return 0;
-
-	const cacheKey = seq + padType + nDirPads;
-	if (costMemo[cacheKey] !== undefined) return costMemo[cacheKey];
-
-	let cost = 0;
-	let curr = 'A';
-
-	for (const key of seq + 'A') {
-		const subSeqArr = getSequences(curr, key, padType);
-		let minSubCost = Infinity;
-		for (const subSeq of subSeqArr) {
-			const subCost = calcSeqCost(subSeq, DIR_TYPE, nDirPads - 1) + 1;
-			minSubCost = Math.min(minSubCost, subCost);
+	const pad = pads[type];
+	const dirSeqArr = pad.dirSeqMap[src + dst];
+	let minCost = Infinity;
+	for (let dirSeq of dirSeqArr) {
+		let cost = 0;
+		for (let i = 0; i <= dirSeq.length; i++) {
+			const nextKey = dirSeq[i] ?? 'A';
+			const prevKey = dirSeq[i - 1] ?? 'A';
+			cost += moveAndPressCost(DIR_TYPE, prevKey, nextKey, extraDirPads - 1);
 		}
-		cost += minSubCost;
-		curr = key;
+		minCost = Math.min(minCost, cost);
 	}
-	cost -= 1; // Last A isn't pressed
 
-	return (costMemo[cacheKey] = cost);
+	return (mem[memKey] = minCost);
 };
 
-const solve = (inputText, nDirPads) => {
-	const codes = inputText.trim().split('\n');
-	let res = 0;
+const solve = (inputText, numDirPads) => {
+	const codes = inputText.split('\n');
+	let sum = 0;
 	for (const code of codes) {
-		const cost = calcSeqCost(code, NUM_TYPE, nDirPads);
-		res += cost * Number(code.replace('A', ''));
+		let cost = 0;
+		for (let i = 0; i < code.length; i++) {
+			cost += moveAndPressCost(NUM_TYPE, code[i - 1] ?? 'A', code[i], numDirPads);
+		}
+		sum += Number(code.replace('A', '')) * cost;
 	}
-	return res;
+	return sum;
 };
 
 const inputText = fs.readFileSync('./input.txt', 'ascii');
